@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Proxy Tester</title>
+    <style>
+        body { font-family: system-ui; background: #f4f4f9; padding: 30px; max-width: 1600px; margin: 0 auto; }
+        .header { margin-bottom: 15px; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .header-top h2 { margin: 0; color: #2d3436; }
+        .status-badge { padding: 8px 16px; border-radius: 20px; color: white; display: inline-flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+        .status-text { font-weight: 600; }
+        .status-timer { opacity: 0.9; font-weight: normal; }
+        .live { background: #00b894; } .dead { background: #d63031; }
+        #ws-msg, #sse-msg { color: #636e72; font-size: 0.9em; }
+        
+        .history {
+            margin-top: 40px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .history h2 { margin-top: 0; color: #2d3436; }
+        .history-list { list-style: none; padding: 0; }
+        .history-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #dfe6e9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .history-item.success { border-left-color: #00b894; }
+        .history-item.failure { border-left-color: #d63031; }
+        .history-item .time { color: #636e72; font-size: 0.9em; }
+        .history-item .duration { font-weight: bold; color: #2d3436; }
+        .history-item .status { font-size: 0.9em; }
+        .status.error { color: #d63031; }
+        .status.closed { color: #636e72; }
+        
+        .headers {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        .headers-column {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .headers-column:first-child h2 { margin-top: 0; color: #2d3436; margin-bottom: 15px; }
+        .client-ip {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #0984e3;
+        }
+        .server-info {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #00b894;
+        }
+        .client-ip strong,
+        .server-info strong { color: #2d3436; }
+        .client-ip .ip-value,
+        .server-info .info-value {
+            font-family: monospace;
+            color: #0984e3;
+            font-size: 1.1em;
+            margin-left: 8px;
+        }
+        .server-info .info-value {
+            color: #00b894;
+        }
+        .headers-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .headers-table th,
+        .headers-table td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #dfe6e9;
+        }
+        .headers-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2d3436;
+        }
+        .headers-table td:first-child {
+            font-family: monospace;
+            color: #0984e3;
+        }
+        .headers-table td:last-child {
+            font-family: monospace;
+            color: #2d3436;
+            word-break: break-all;
+        }
+        
+        .loadbalancer {
+            margin-top: 20px;
+            margin-bottom: 40px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .loadbalancer .lb-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .loadbalancer h2 { margin: 0; color: #2d3436; }
+        .loadbalancer button {
+            background: #0984e3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        .loadbalancer button:hover { background: #0769c0; }
+        .loadbalancer button:disabled {
+            background: #dfe6e9;
+            cursor: not-allowed;
+        }
+        .lb-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+        .lb-item {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 12px;
+            border-left: 4px solid #0984e3;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .lb-item .lb-number {
+            font-weight: 600;
+            color: #636e72;
+            font-size: 0.9em;
+        }
+        .lb-item .lb-node {
+            display: flex;
+            align-items: center;
+            font-family: monospace;
+            color: #2d3436;
+        }
+        .lb-item .lb-hostname {
+            display: flex;
+            align-items: center;
+            font-family: monospace;
+            color: #636e72;
+            font-size: 0.9em;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding: 20px;
+            text-align: center;
+            color: #95a5a6;
+            font-size: 0.85em;
+            border-top: 1px solid #dfe6e9;
+        }
+        .footer .version {
+            font-family: monospace;
+        }
+    </style>
+    <script>
+        // #SERVER_INFO_INJECTION
+    </script>
+</head>
+<body>
+
+    <div class="loadbalancer">
+        <div class="lb-header">
+            <h2>Load Balancer Test</h2>
+            <button id="lb-test-btn" onclick="runLoadBalancerTest()">Reload</button>
+        </div>
+        <div class="lb-grid" id="lb-results">
+            <p style="color: #95a5a6; text-align: center; grid-column: 1 / -1;">Loading...</p>
+        </div>
+    </div>
+
+    <div class="headers">
+        <div class="headers-column">
+            <h2>HTTP Request (Page Load)</h2>
+            <div id="html-headers-content">
+                <p style="color: #95a5a6; text-align: center;">No headers received yet</p>
+            </div>
+        </div>
+        <div class="headers-column">
+            <div class="header">
+                <div class="header-top">
+                    <h2>WebSocket</h2>
+                    <div id="ws-status" class="status-badge dead">
+                        <span class="status-text">DISCONNECTED</span>
+                        <span id="ws-timer" class="status-timer">0s</span>
+                    </div>
+                </div>
+                <p id="ws-msg">Waiting for handshake...</p>
+            </div>
+            <div id="ws-headers-content">
+                <p style="color: #95a5a6; text-align: center;">Not connected</p>
+            </div>
+        </div>
+        <div class="headers-column">
+            <div class="header">
+                <div class="header-top">
+                    <h2>Server-Sent Events</h2>
+                    <div id="sse-status" class="status-badge dead">
+                        <span class="status-text">DISCONNECTED</span>
+                        <span id="sse-timer" class="status-timer">0s</span>
+                    </div>
+                </div>
+                <p id="sse-msg">Waiting for connection...</p>
+            </div>
+            <div id="sse-headers-content">
+                <p style="color: #95a5a6; text-align: center;">Not connected</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="history">
+        <h2>Connection History</h2>
+        <ul class="history-list" id="history-list">
+            <li style="color: #95a5a6; text-align: center;">No connections yet</li>
+        </ul>
+    </div>
+
+    <script>
+        let history = [];
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        // Generate a visual insignia (military ribbon style) from hash bytes
+        function generateInsignia(hashArray) {
+            // Determine number of bars (2-6) from first byte
+            const numBars = 2 + (hashArray[0] % 5);
+            
+            const bars = [];
+            let lastHue = -120; // Start offset to ensure first bar contrasts well
+            
+            for (let i = 0; i < numBars; i++) {
+                const offset = i * 4;
+                
+                // Get base hue from hash
+                const baseHue = (hashArray[offset] + (hashArray[offset + 1] << 8)) % 360;
+                
+                // Ensure at least 90 degrees separation from previous bar for good contrast
+                let hue = baseHue;
+                const diff = Math.abs((hue - lastHue + 360) % 360);
+                if (diff < 90) {
+                    hue = (lastHue + 120 + (hashArray[offset + 2] % 90)) % 360;
+                }
+                lastHue = hue;
+                
+                const saturation = 65 + (hashArray[offset + 2] % 30);
+                const lightness = 45 + (hashArray[offset + 3] % 25);
+                
+                // Width varies from 4px to 14px based on hash
+                const width = 4 + (hashArray[numBars + i] % 11);
+                
+                bars.push({ color: `hsl(${hue}, ${saturation}%, ${lightness}%)`, width });
+            }
+            
+            let html = '<div style="display: inline-flex; gap: 0px; margin-right: 10px; vertical-align: middle; height: 16px;">';
+            bars.forEach(bar => {
+                html += `<div style="width: ${bar.width}px; height: 16px; background: ${bar.color};"></div>`;
+            });
+            html += '</div>';
+            
+            return html;
+        }
+        
+        function displayServerInfo(data, containerId) {
+            const headersContent = document.getElementById(containerId);
+            const headers = data.headers;
+            
+            let html = '';
+            
+            // Add protocol info if available
+            if (data.protocol) {
+                html += `<div class="client-ip"><strong>Protocol:</strong><span class="ip-value">${escapeHtml(data.protocol)}</span></div>`;
+            }
+            
+            // Add client address if available
+            if (data.client_addr) {
+                html += `<div class="client-ip"><strong>Client Address:</strong><span class="ip-value">${escapeHtml(data.client_addr)}</span></div>`;
+            }
+            
+            // Build server info section
+            let serverInfoHtml = '';
+            if (data.server_addr || data.hostname || data.node_name) {
+                serverInfoHtml += '<div class="server-info">';
+                if (data.server_addr) {
+                    serverInfoHtml += `<div><strong>Server Address:</strong><span class="info-value">${escapeHtml(data.server_addr)}</span></div>`;
+                }
+                if (data.hostname) {
+                    const insignia = data.hostname_hash ? generateInsignia(data.hostname_hash) : '';
+                    serverInfoHtml += `<div style="display: flex; align-items: center;"><strong>Hostname:</strong><span class="info-value" style="display: flex; align-items: center;">${insignia}${escapeHtml(data.hostname)}</span></div>`;
+                }
+                if (data.node_name) {
+                    const insignia = data.node_name_hash ? generateInsignia(data.node_name_hash) : '';
+                    serverInfoHtml += `<div style="display: flex; align-items: center;"><strong>Node Name:</strong><span class="info-value" style="display: flex; align-items: center;">${insignia}${escapeHtml(data.node_name)}</span></div>`;
+                }
+                serverInfoHtml += '</div>';
+            }
+            
+            let tableHtml = '<table class="headers-table"><thead><tr><th>Header Name</th><th>Value</th></tr></thead><tbody>';
+            for (const [name, value] of Object.entries(headers)) {
+                tableHtml += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(value)}</td></tr>`;
+            }
+            tableHtml += '</tbody></table>';
+            
+            headersContent.innerHTML = html + serverInfoHtml + tableHtml;
+        }
+        
+        // Display initial server info from page load if available
+        if (window.initialServerInfo) {
+            displayServerInfo(window.initialServerInfo, 'html-headers-content');
+        }
+        
+        function formatDuration(seconds) {
+            if (seconds < 60) return `${seconds}s`;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}m ${secs}s`;
+        }
+        
+        function addOrUpdateHistory(entry, isUpdate = false) {
+            if (isUpdate && history.length > 0) {
+                // Update the first entry
+                history[0] = entry;
+            } else if (entry.error) {
+                // Find the first error entry of the same type (WS or SSE)
+                const existingErrorIndex = history.findIndex(h => h.error && h.type === entry.type);
+                if (existingErrorIndex !== -1) {
+                    // Replace the existing error of the same type
+                    history[existingErrorIndex] = entry;
+                } else {
+                    // Add new error entry
+                    history.unshift(entry);
+                    if (history.length > 20) history.pop();
+                }
+            } else {
+                history.unshift(entry);
+                if (history.length > 20) history.pop(); // Keep last 20
+            }
+            renderHistory([wsManager.getCurrentEntry(), sseManager.getCurrentEntry()]);
+        }
+        
+        function renderHistory(currentConnections) {
+            const list = document.getElementById('history-list');
+            if (history.length === 0 && currentConnections.every(c => !c)) {
+                list.innerHTML = '<li style="color: #95a5a6; text-align: center;">No connections yet</li>';
+                return;
+            }
+            
+            const allEntries = [...currentConnections.filter(c => c), ...history];
+            allEntries.sort((a, b) => b.timestamp - a.timestamp);
+            
+            list.innerHTML = allEntries.map(entry => {
+                const className = entry.active ? 'success' : entry.error ? 'failure' : 'success';
+                const statusClass = entry.active ? 'closed' : entry.error ? 'error' : 'closed';
+                let statusText = entry.active ? 'Active' : entry.error ? `Error: ${entry.error}` : 'Closed normally';
+                
+                if (entry.error && entry.attempts > 1) {
+                    statusText += ` (${entry.attempts} attempts)`;
+                }
+                
+                const timestamp = new Date(entry.timestamp).toLocaleTimeString();
+                const typeLabel = entry.type === 'SSE' ? 'SSE' : 'WS';
+                const typeBadge = `<span style="background: ${entry.type === 'SSE' ? '#6c5ce7' : '#0984e3'}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 8px;">${typeLabel}</span>`;
+                
+                return `
+                    <li class="history-item ${className}">
+                        <div>
+                            <span class="time">${timestamp}</span>
+                            <span> - Connection #${entry.id}${typeBadge}</span>
+                        </div>
+                        <div>
+                            <span class="duration">${formatDuration(entry.duration)}</span>
+                            <span class="status ${statusClass}"> • ${statusText}</span>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+        
+        // Generic connection manager factory
+        function createConnectionManager(config) {
+            let connectionId = 0;
+            let currentConnectionEntry = null;
+            let failureAttempts = 0;
+            let everConnected = false;
+            
+            function connect() {
+                const currentId = ++connectionId;
+                const connection = config.createConnection();
+                let start = Date.now();
+                let timerInterval;
+                let connectionOpened = false;
+                
+                const timer = document.getElementById(config.timerId);
+                const statusBadge = document.getElementById(config.statusId);
+                const statusText = statusBadge.querySelector('.status-text');
+                const msg = document.getElementById(config.msgId);
+                
+                // Show connecting state
+                statusText.innerText = "CONNECTING...";
+                statusBadge.className = "status-badge dead";
+                msg.innerText = `Attempting ${config.typeLabel} connection #${currentId}...`;
+                
+                const onOpen = () => {
+                    connectionOpened = true;
+                    everConnected = true;
+                    failureAttempts = 0;
+                    
+                    statusText.innerText = "CONNECTED";
+                    statusBadge.className = "status-badge live";
+                    msg.innerText = `${config.typeLabel} connected successfully`;
+                    
+                    currentConnectionEntry = {
+                        id: currentId,
+                        timestamp: start,
+                        duration: 0,
+                        active: true,
+                        type: config.type
+                    };
+                    config.updateHistory();
+                    
+                    timerInterval = setInterval(() => {
+                        const duration = Math.floor((Date.now() - start) / 1000);
+                        timer.innerText = duration + "s";
+                        if (currentConnectionEntry) {
+                            currentConnectionEntry.duration = duration;
+                            config.updateHistory();
+                        }
+                    }, 1000);
+                };
+                
+                const onHeaders = (data) => {
+                    displayServerInfo(data, config.headersContentId);
+                    msg.innerText = "Headers received";
+                };
+                
+                const onMessage = (text) => {
+                    msg.innerText = `Last: ${text}`;
+                };
+                
+                const onError = () => {
+                    clearInterval(timerInterval);
+                    const duration = Math.floor((Date.now() - start) / 1000);
+                    
+                    if (connectionOpened) {
+                        // Connection was established and then closed
+                        statusText.innerText = "DISCONNECTED";
+                        statusBadge.className = "status-badge dead";
+                        msg.innerText = `Connection closed after ${formatDuration(duration)}. Reconnecting in 2s...`;
+                        
+                        if (currentConnectionEntry) {
+                            currentConnectionEntry.duration = duration;
+                            currentConnectionEntry.active = false;
+                            history.unshift(currentConnectionEntry);
+                            if (history.length > 20) history.pop();
+                            currentConnectionEntry = null;
+                            config.updateHistory();
+                        }
+                    } else {
+                        // Connection never opened
+                        if (everConnected) {
+                            failureAttempts++;
+                            statusText.innerText = "FAILED";
+                            statusBadge.className = "status-badge dead";
+                            msg.innerText = `Failed to reconnect (attempt #${currentId}). Retrying in 2s...`;
+                            
+                            addOrUpdateHistory({
+                                id: currentId,
+                                timestamp: start,
+                                duration: duration,
+                                error: 'Failed to connect',
+                                attempts: failureAttempts,
+                                type: config.type
+                            });
+                        } else {
+                            statusText.innerText = "FAILED";
+                            statusBadge.className = "status-badge dead";
+                            msg.innerText = `Connection attempt #${currentId} failed. Retrying in 2s...`;
+                        }
+                    }
+                    
+                    timer.innerText = "0s";
+                    config.closeConnection(connection);
+                    setTimeout(connect, 2000);
+                };
+                
+                config.setupHandlers(connection, { onOpen, onHeaders, onMessage, onError });
+            }
+            
+            return { connect, getCurrentEntry: () => currentConnectionEntry };
+        }
+        
+        // WebSocket manager
+        const wsManager = createConnectionManager({
+            type: 'WebSocket',
+            typeLabel: 'WebSocket',
+            timerId: 'ws-timer',
+            statusId: 'ws-status',
+            msgId: 'ws-msg',
+            headersContentId: 'ws-headers-content',
+            createConnection: () => {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                return new WebSocket(`${protocol}//${window.location.host}/ws`);
+            },
+            closeConnection: (ws) => {},  // WebSocket closes automatically
+            updateHistory: () => renderHistory([wsManager.getCurrentEntry(), sseManager.getCurrentEntry()]),
+            setupHandlers: (ws, callbacks) => {
+                ws.onopen = callbacks.onOpen;
+                ws.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        if (data.type === 'headers') {
+                            callbacks.onHeaders(data);
+                        } else {
+                            callbacks.onMessage(e.data);
+                        }
+                    } catch (err) {
+                        callbacks.onMessage(e.data);
+                    }
+                };
+                ws.onerror = () => {};
+                ws.onclose = callbacks.onError;
+            }
+        });
+        
+        // SSE manager
+        const sseManager = createConnectionManager({
+            type: 'SSE',
+            typeLabel: 'SSE',
+            timerId: 'sse-timer',
+            statusId: 'sse-status',
+            msgId: 'sse-msg',
+            headersContentId: 'sse-headers-content',
+            createConnection: () => new EventSource('/sse'),
+            closeConnection: (es) => es.close(),
+            updateHistory: () => renderHistory([wsManager.getCurrentEntry(), sseManager.getCurrentEntry()]),
+            setupHandlers: (es, callbacks) => {
+                es.onopen = callbacks.onOpen;
+                es.addEventListener('headers', (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        callbacks.onHeaders(data);
+                    } catch (err) {
+                        console.error('SSE parse error:', err);
+                    }
+                });
+                es.onmessage = (e) => callbacks.onMessage(e.data);
+                es.onerror = callbacks.onError;
+            }
+        });
+        
+        // Start both connections
+        wsManager.connect();
+        sseManager.connect();
+        
+        // Load Balancer Test
+        async function runLoadBalancerTest() {
+            const button = document.getElementById('lb-test-btn');
+            const resultsDiv = document.getElementById('lb-results');
+            
+            button.disabled = true;
+            button.textContent = 'Running...';
+            resultsDiv.innerHTML = '<p style="color: #95a5a6; text-align: center; grid-column: 1 / -1;">Making 15 requests...</p>';
+            
+            const results = [];
+            
+            // Make 15 requests with cache busting
+            for (let i = 0; i < 15; i++) {
+                try {
+                    const cachebust = Date.now() + Math.random();
+                    const response = await fetch(`/lb?cb=${cachebust}`);
+                    const data = await response.json();
+                    results.push({ number: i + 1, data });
+                } catch (err) {
+                    results.push({ number: i + 1, error: err.message });
+                }
+            }
+            
+            // Display results
+            let html = '';
+            for (const result of results) {
+                if (result.error) {
+                    html += `
+                        <div class="lb-item">
+                            <div class="lb-number">#${result.number}</div>
+                            <div style="color: #d63031;">Error: ${escapeHtml(result.error)}</div>
+                        </div>
+                    `;
+                } else {
+                    const nodeInsignia = result.data.node_name_hash ? generateInsignia(result.data.node_name_hash) : '';
+                    const hostnameInsignia = result.data.hostname_hash ? generateInsignia(result.data.hostname_hash) : '';
+                    
+                    html += `
+                        <div class="lb-item">
+                            ${result.data.node_name ? `<div class="lb-node">${nodeInsignia}${escapeHtml(result.data.node_name)}</div>` : ''}
+                            ${result.data.hostname ? `<div class="lb-hostname">${hostnameInsignia}${escapeHtml(result.data.hostname)}</div>` : ''}
+                        </div>
+                    `;
+                }
+            }
+            
+            resultsDiv.innerHTML = html;
+            button.disabled = false;
+            button.textContent = 'Reload';
+        }
+        
+        // Auto-run the load balancer test on page load
+        runLoadBalancerTest();
+    </script>
+    
+    <div class="footer">
+        <div id="version-footer">Loading version...</div>
+    </div>
+    
+    <script>
+        // Display version info in footer
+        if (window.initialServerInfo) {
+            const footer = document.getElementById('version-footer');
+            if (window.initialServerInfo.version && window.initialServerInfo.build_time) {
+                footer.innerHTML = `<span class="version">Sensillum v${escapeHtml(window.initialServerInfo.version)}</span> (built ${escapeHtml(window.initialServerInfo.build_time)})`;
+            }
+        }
+    </script>
+</body>
+</html>

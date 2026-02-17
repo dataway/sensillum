@@ -1,0 +1,27 @@
+[package]
+name = "sensillum"
+version = "0.1.0"
+edition = "2021"
+authors = ["Anthony Uk"]
+license = "MIT"
+
+[dependencies]
+hyper = { version = "0.14", features = ["server", "http1", "http2", "tcp", "stream"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "io-util"] }
+tokio-tungstenite = { version = "0.21", default-features = false, features = ["handshake"] }
+rust-embed = { version = "8" }
+futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
+serde_json = "1"
+hostname = "0.3"
+async-stream = "0.3"
+sha2 = "0.10"
+
+[build-dependencies]
+built = { version = "0.7", features = ["chrono"] }
+
+#[profile.release]
+#strip = true       # Strip symbols from binary
+#lto = true         # Link-time optimization
+#opt-level = "z"    # Optimize for size
+#codegen-units = 1  # Better optimization, slower compile
+
