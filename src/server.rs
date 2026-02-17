@@ -43,9 +43,16 @@ async fn handle_request(
     server_addr: SocketAddr,
     config: Arc<ServerConfig>,
 ) -> Result<Response<Body>, Infallible> {
-    let path = req.uri().path();
+    let mut path = req.uri().path();
     let headers = req.headers().clone();
     let protocol = format!("{:?}", req.version());
+    
+    // Strip URL prefix if configured
+    if let Some(prefix) = &config.url_prefix {
+        path = path.strip_prefix(prefix)
+            .map(|p| if p.is_empty() { "/" } else { p })
+            .unwrap_or(""); // Empty string won't match any route
+    }
     
     let response = match path {
         "/" => index::handle_index(req, client_addr, server_addr, config).await,

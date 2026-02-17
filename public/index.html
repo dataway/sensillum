@@ -182,6 +182,7 @@
     </style>
     <script>
         // #SERVER_INFO_INJECTION
+        const urlPrefix = window.initialServerInfo?.url_prefix || '';
     </script>
 </head>
 <body>
@@ -534,7 +535,7 @@
             headersContentId: 'ws-headers-content',
             createConnection: () => {
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                return new WebSocket(`${protocol}//${window.location.host}/ws`);
+                return new WebSocket(`${protocol}//${window.location.host}${urlPrefix}/ws`);
             },
             closeConnection: (ws) => {},  // WebSocket closes automatically
             updateHistory: () => renderHistory([wsManager.getCurrentEntry(), sseManager.getCurrentEntry()]),
@@ -565,7 +566,9 @@
             statusId: 'sse-status',
             msgId: 'sse-msg',
             headersContentId: 'sse-headers-content',
-            createConnection: () => new EventSource('/sse'),
+            createConnection: () => {
+                return new EventSource(`${urlPrefix}/sse`);
+            },
             closeConnection: (es) => es.close(),
             updateHistory: () => renderHistory([wsManager.getCurrentEntry(), sseManager.getCurrentEntry()]),
             setupHandlers: (es, callbacks) => {
@@ -602,7 +605,7 @@
             for (let i = 0; i < 15; i++) {
                 try {
                     const cachebust = Date.now() + Math.random();
-                    const response = await fetch(`/lb?cb=${cachebust}`);
+                    const response = await fetch(`${urlPrefix}/lb?cb=${cachebust}`);
                     const data = await response.json();
                     results.push({ number: i + 1, data });
                 } catch (err) {

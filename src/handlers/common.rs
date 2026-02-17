@@ -43,6 +43,7 @@ pub fn build_server_info(
         "protocol": protocol,
         "version": build_info::version(),
         "build_time": build_info::build_time(),
+        "url_prefix": config.url_prefix.as_deref().unwrap_or(""),
         "headers": headers_json
     });
     
