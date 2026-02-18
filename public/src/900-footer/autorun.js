@@ -1,5 +1,9 @@
 // Display initial server info from page load if available
 if (window.initialServerInfo) {
+    const protocol = detectHttpProtocol();
+    if (protocol) {
+        window.initialServerInfo.httpProtocol = protocol;
+    }
     displayServerInfo(window.initialServerInfo, 'html-headers-content');
 }
 

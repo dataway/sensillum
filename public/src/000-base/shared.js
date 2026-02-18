@@ -1,7 +1,3 @@
-const urlPrefix = window.initialServerInfo?.url_prefix || '';
-
-let history = [];
-
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
@@ -21,15 +17,35 @@ function formatBytes(bytes) {
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
 
+// Detect HTTP protocol version from Performance API (for page navigation)
+function detectHttpProtocol() {
+    try {
+        const navTiming = performance.getEntriesByType('navigation')[0];
+        if (navTiming && navTiming.nextHopProtocol) {
+            return navTiming.nextHopProtocol;
+        }
+    } catch (err) {
+        console.error('Failed to detect HTTP protocol:', err);
+    }
+    return null;
+}
+
 function displayServerInfo(data, containerId) {
     const headersContent = document.getElementById(containerId);
     const headers = data.headers;
 
     let html = '';
 
-    // Add protocol info if available
-    if (data.protocol) {
-        html += `<div class="client-ip"><strong>Protocol:</strong><span class="ip-value">${escapeHtml(data.protocol)}</span></div>`;
+    // Add protocol info in a combined box
+    if (data.httpProtocol || data.protocol) {
+        html += '<div class="client-ip">';
+        if (data.httpProtocol) {
+            html += `<div><strong>Client protocol:</strong><span class="ip-value">${escapeHtml(data.httpProtocol)}</span></div>`;
+        }
+        if (data.protocol) {
+            html += `<div><strong>Server protocol:</strong><span class="ip-value">${escapeHtml(data.protocol)}</span></div>`;
+        }
+        html += '</div>';
     }
 
     // Add client address if available
