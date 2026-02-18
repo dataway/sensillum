@@ -1,0 +1,38 @@
+<div class="headers">
+    <div class="headers-column">
+        <h2>HTTP Request (Page Load)</h2>
+        <div id="html-headers-content">
+            <p style="color: #95a5a6; text-align: center;">No headers received yet</p>
+        </div>
+    </div>
+    <div class="headers-column">
+        <div class="header">
+            <div class="header-top">
+                <h2>WebSocket</h2>
+                <div id="ws-status" class="status-badge dead">
+                    <span class="status-text">DISCONNECTED</span>
+                    <span id="ws-timer" class="status-timer">0s</span>
+                </div>
+            </div>
+            <p id="ws-msg">Waiting for handshake...</p>
+        </div>
+        <div id="ws-headers-content">
+            <p style="color: #95a5a6; text-align: center;">Not connected</p>
+        </div>
+    </div>
+    <div class="headers-column">
+        <div class="header">
+            <div class="header-top">
+                <h2>Server-Sent Events</h2>
+                <div id="sse-status" class="status-badge dead">
+                    <span class="status-text">DISCONNECTED</span>
+                    <span id="sse-timer" class="status-timer">0s</span>
+                </div>
+            </div>
+            <p id="sse-msg">Waiting for connection...</p>
+        </div>
+        <div id="sse-headers-content">
+            <p style="color: #95a5a6; text-align: center;">Not connected</p>
+        </div>
+    </div>
+</div>

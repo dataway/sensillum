@@ -1,0 +1,58 @@
+.history {
+    margin-top: 40px;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.history h2 {
+    margin-top: 0;
+    color: #2d3436;
+}
+
+.history-list {
+    list-style: none;
+    padding: 0;
+}
+
+.history-item {
+    padding: 12px;
+    margin: 8px 0;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #dfe6e9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-item.success {
+    border-left-color: #00b894;
+}
+
+.history-item.failure {
+    border-left-color: #d63031;
+}
+
+.history-item .time {
+    color: #636e72;
+    font-size: 0.9em;
+}
+
+.history-item .duration {
+    font-weight: bold;
+    color: #2d3436;
+}
+
+.history-item .status {
+    font-size: 0.9em;
+}
+
+.status.error {
+    color: #d63031;
+}
+
+.status.closed {
+    color: #636e72;
+}

@@ -3,11 +3,12 @@ use rust_embed::RustEmbed;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use crate::build_info;
 use crate::config::ServerConfig;
 use super::common::build_server_info;
 
 #[derive(RustEmbed)]
-#[folder = "public/"]
+#[folder = "generated/"]
 pub struct Assets;
 
 pub async fn handle_index(
@@ -16,22 +17,11 @@ pub async fn handle_index(
     server_addr: SocketAddr,
     config: Arc<ServerConfig>,
 ) -> Response<Body> {
-    let asset = match Assets::get("index.html") {
-        Some(content) => content,
-        None => {
-            return Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::from("index.html not found"))
-                .unwrap();
-        }
-    };
-    
-    let html = std::str::from_utf8(&asset.data).unwrap();
-    
-    // Get HTTP protocol version
+    let header = Assets::get("header.html").expect("header.html missing from binary");
+    let footer = Assets::get("footer.html").expect("footer.html missing from binary");
+    let tail   = Assets::get("tail.html").expect("tail.html missing from binary");
+
     let protocol = format!("{:?}", req.version());
-    
-    // Build server info using shared function
     let server_info = build_server_info(
         req.headers(),
         client_addr,
@@ -39,21 +29,27 @@ pub async fn handle_index(
         config,
         protocol,
     );
-    
-    // Inject the server info as JavaScript variable into the HTML
-    let injected_script = format!(
-        "window.initialServerInfo = {};",
-        server_info.to_string()
+
+    let version_line = format!(
+        r#"<span class="version">Sensillum v{}</span> (built {})"#,
+        build_info::version(),
+        build_info::build_time(),
     );
-    
-    let modified_html = html.replace("// #SERVER_INFO_INJECTION", &injected_script);
-    
+
+    let body = [
+        header.data.as_ref(),
+        server_info.to_string().as_bytes(),
+        footer.data.as_ref(),
+        version_line.as_bytes(),
+        tail.data.as_ref(),
+    ].concat();
+
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "text/html; charset=utf-8")
         .header("Cache-Control", "no-cache, no-store, must-revalidate")
         .header("Pragma", "no-cache")
         .header("Expires", "0")
-        .body(Body::from(modified_html))
+        .body(Body::from(body))
         .unwrap()
 }

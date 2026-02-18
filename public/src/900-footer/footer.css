@@ -1,0 +1,12 @@
+.footer {
+    margin-top: 40px;
+    padding: 20px;
+    text-align: center;
+    color: #95a5a6;
+    font-size: 0.85em;
+    border-top: 1px solid #dfe6e9;
+}
+
+.footer .version {
+    font-family: monospace;
+}

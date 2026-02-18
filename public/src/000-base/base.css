@@ -1,0 +1,56 @@
+body {
+        font-family: system-ui;
+        background: #f4f4f9;
+        padding: 30px;
+        max-width: 1600px;
+        margin: 0 auto;
+}
+
+.header {
+        margin-bottom: 15px;
+}
+
+.header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+}
+
+.header-top h2 {
+        margin: 0;
+        color: #2d3436;
+}
+
+.status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+}
+
+.status-text {
+        font-weight: 600;
+}
+
+.status-timer {
+        opacity: 0.9;
+        font-weight: normal;
+}
+
+.live {
+        background: #00b894;
+}
+
+.dead {
+        background: #d63031;
+}
+
+#ws-msg,
+#sse-msg {
+        color: #636e72;
+        font-size: 0.9em;
+}

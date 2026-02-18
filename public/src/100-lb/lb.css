@@ -1,0 +1,76 @@
+.loadbalancer {
+    margin-top: 20px;
+    margin-bottom: 40px;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.loadbalancer .lb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.loadbalancer h2 {
+    margin: 0;
+    color: #2d3436;
+}
+
+.loadbalancer button {
+    background: #0984e3;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.loadbalancer button:hover {
+    background: #0769c0;
+}
+
+.loadbalancer button:disabled {
+    background: #dfe6e9;
+    cursor: not-allowed;
+}
+
+.lb-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+}
+
+.lb-item {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 12px;
+    border-left: 4px solid #0984e3;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lb-item .lb-number {
+    font-weight: 600;
+    color: #636e72;
+    font-size: 0.9em;
+}
+
+.lb-item .lb-node {
+    display: flex;
+    align-items: center;
+    font-family: monospace;
+    color: #2d3436;
+}
+
+.lb-item .lb-hostname {
+    display: flex;
+    align-items: center;
+    font-family: monospace;
+    color: #636e72;
+    font-size: 0.9em;
+}
