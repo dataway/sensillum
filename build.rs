@@ -23,6 +23,8 @@ fn main() {
     let body = collect(&subdirs, "html", "<!-- ", " -->");
     let js = collect(&subdirs, "js", "// ", "");
 
+    let waf_payloads_js = process_waf_payloads();
+
     // Split the output around the server-info injection point so that
     // index.rs can sandwich the runtime-generated JSON between two static
     // byte slices without any string scanning at request time.
@@ -47,7 +49,9 @@ fn main() {
 
     let tail = format!(
         r#"</div>
-<script>{js}
+<script>
+{waf_payloads_js}
+{js}
 </script>
 </body>
 </html>
@@ -95,4 +99,59 @@ fn collect(
         }
     }
     out
+}
+
+// Read public/src/waf-payloads.json once, then:
+//  - return a JS snippet defining WAF_KEY and WAF_PAYLOADS (XOR-encoded) for the frontend
+//  - write generated/waf_payloads.rs with a static Rust array for the /waf handler
+fn process_waf_payloads() -> String {
+    const KEY: u8 = 0x5A;
+    let path = "public/src/waf-payloads.json";
+    println!("cargo:rerun-if-changed={path}");
+    let content =
+        std::fs::read_to_string(path).unwrap_or_else(|e| panic!("Failed to read {path}: {e}"));
+    let entries: Vec<serde_json::Map<String, serde_json::Value>> =
+        serde_json::from_str(&content).expect("Invalid waf-payloads.json");
+
+    // --- JS output (XOR-encoded) ---
+    let mut js = format!("const WAF_KEY = {KEY};\nconst WAF_PAYLOADS = [\n");
+    for entry in &entries {
+        js.push_str("  {");
+        for (k, v) in entry {
+            if k == "payload" {
+                let s = v.as_str().expect("payload must be a string");
+                let data: Vec<String> = s.bytes().map(|b| (b ^ KEY).to_string()).collect();
+                js.push_str(&format!(" data: [{}],", data.join(",")));
+            } else {
+                js.push_str(&format!(" {k}: {},", v));
+            }
+        }
+        js.push_str(" },\n");
+    }
+    js.push_str("];\n");
+
+    // --- Rust static array ---
+    let mut rs = String::from(
+        "pub struct WafEntry { pub name: &'static str, pub payload: &'static str }\n\
+         pub static WAF_ENTRIES: &[WafEntry] = &[\n",
+    );
+    for entry in &entries {
+        let name = entry
+            .get("name")
+            .and_then(|v| v.as_str())
+            .expect("entry missing \"name\"");
+        let payload = entry
+            .get("payload")
+            .and_then(|v| v.as_str())
+            .expect("entry missing \"payload\"");
+        rs.push_str(&format!(
+            "    WafEntry {{ name: {:?}, payload: {:?} }},\n",
+            name, payload
+        ));
+    }
+    rs.push_str("];\n");
+
+    std::fs::write("generated/waf_payloads.rs", rs).expect("Failed to write waf_payloads.rs");
+
+    js
 }

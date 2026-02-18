@@ -1,0 +1,19 @@
+<div class="test-panel">
+    <div class="test-header">
+        <h2>WAF Ingress Test</h2>
+        <button id="waf-ingress-btn" onclick="runWafIngressTest()">Run Test</button>
+    </div>
+    <div id="waf-ingress-results">
+        <p style="color: #95a5a6; text-align: center;">Send known attack strings to the server (via header, URL path, query) and check whether the WAF blocks them</p>
+    </div>
+</div>
+
+<div class="test-panel">
+    <div class="test-header">
+        <h2>WAF Egress Test</h2>
+        <button id="waf-egress-btn" onclick="runWafEgressTest()">Run Test</button>
+    </div>
+    <div id="waf-egress-results">
+        <p style="color: #95a5a6; text-align: center;">Ask the server to send known attack strings back to the browser (via response body, response header) and check whether the WAF blocks them</p>
+    </div>
+</div>

@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::config::ServerConfig;
-use crate::handlers::{index, ws, sse, lb, echo};
+use crate::handlers::{index, ws, sse, lb, echo, waf};
 
 pub async fn run_server(config: Arc<ServerConfig>) -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
@@ -59,6 +59,7 @@ async fn handle_request(
         "/ws" => ws::handle_ws_upgrade(req, client_addr, server_addr, config).await,
         "/sse" => sse::handle_sse(req, client_addr, server_addr, config).await,
         "/lb" => lb::handle_lb(req, headers, config, client_addr, server_addr, protocol).await.unwrap(),
+        "/waf" => waf::handle_waf(req).await,
         p if p == "/echo" || p.starts_with("/echo/") => {
             let uri = req.uri();
             let echo_path = uri.path().to_string();

