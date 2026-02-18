@@ -1,4 +1,6 @@
-.size-test {
+/* Shared styles for test panels (header-size, url-size, header-charset, etc.) */
+
+.test-panel {
     margin-top: 20px;
     margin-bottom: 40px;
     background: white;
@@ -7,24 +9,24 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.size-test .test-header {
+.test-panel .test-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
 }
 
-.size-test h2 {
+.test-panel h2 {
     margin: 0;
     color: #2d3436;
 }
 
-.size-test .button-group {
+.test-panel .button-group {
     display: flex;
     gap: 10px;
 }
 
-.size-test button {
+.test-panel button {
     background: #e17055;
     color: white;
     border: none;
@@ -34,33 +36,49 @@
     cursor: pointer;
 }
 
-.size-test button:hover {
+.test-panel button:hover {
     background: #d63031;
 }
 
-.size-test button:disabled {
+.test-panel button:disabled {
     background: #dfe6e9;
     cursor: not-allowed;
 }
 
-.size-result {
+.result-card {
     padding: 15px;
     border-radius: 6px;
     background: #f8f9fa;
     border-left: 4px solid #0984e3;
 }
 
-.size-result .result-value {
+.result-card .result-value {
     font-size: 1.8em;
     font-weight: bold;
     color: #0984e3;
     margin: 10px 0;
 }
 
-.size-result .result-detail {
+.result-card .result-detail {
     color: #636e72;
     font-size: 0.9em;
     margin-top: 5px;
+}
+
+.result-summary {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #2d3436;
+}
+
+.result-category {
+    font-weight: 600;
+    color: #636e72;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 12px;
+    margin-bottom: 4px;
 }
 
 .progress-bar {
@@ -76,4 +94,16 @@
     height: 100%;
     background: #0984e3;
     transition: width 0.3s ease;
+}
+
+.success {
+    color: #00b894;
+}
+
+.warning {
+    color: #fdcb6e;
+}
+
+.fail {
+    color: #d63031;
 }

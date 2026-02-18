@@ -11,15 +11,19 @@ pub async fn handle_echo(
     client_addr: SocketAddr,
     server_addr: SocketAddr,
     protocol: String,
+    path: String,
+    query: Option<String>,
 ) -> Result<Response<Body>, hyper::Error> {
-    // Build server info using shared function
-    let response_data = build_server_info(
+    let mut response_data = build_server_info(
         &headers,
         client_addr,
         server_addr,
         config,
         protocol,
     );
+
+    response_data["path"] = serde_json::json!(path);
+    response_data["query"] = serde_json::json!(query);
 
     let response = Response::builder()
         .status(StatusCode::OK)

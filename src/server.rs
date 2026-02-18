@@ -26,10 +26,10 @@ pub async fn run_server(config: Arc<ServerConfig>) -> Result<(), Box<dyn std::er
     
     let server = Server::bind(&addr)
         .http1_title_case_headers(true)
+        .http1_max_buf_size(16 * 1024 * 1024)  // 16 MiB — raise URL and header limits
         .http2_initial_stream_window_size(65535)
         .http2_initial_connection_window_size(1048576)
         .serve(make_svc);
-    
     println!("HTTP/1.1 and HTTP/2 (h2c) enabled");
     
     server.await?;
@@ -59,7 +59,12 @@ async fn handle_request(
         "/ws" => ws::handle_ws_upgrade(req, client_addr, server_addr, config).await,
         "/sse" => sse::handle_sse(req, client_addr, server_addr, config).await,
         "/lb" => lb::handle_lb(req, headers, config, client_addr, server_addr, protocol).await.unwrap(),
-        "/echo" => echo::handle_echo(req, headers, config, client_addr, server_addr, protocol).await.unwrap(),
+        p if p == "/echo" || p.starts_with("/echo/") => {
+            let uri = req.uri();
+            let echo_path = uri.path().to_string();
+            let echo_query = uri.query().map(str::to_string);
+            echo::handle_echo(req, headers, config, client_addr, server_addr, protocol, echo_path, echo_query).await.unwrap()
+        }
         _ => Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(Body::from("Not Found"))
