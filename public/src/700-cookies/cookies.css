@@ -1,0 +1,97 @@
+.cookie-viewer {
+    margin-top: 40px;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cookie-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.cookie-viewer-header h2 {
+    margin: 0;
+    color: #2d3436;
+}
+
+.cookie-viewer-header button {
+    background: #d63031;
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.cookie-viewer-header button:hover {
+    background: #b71c1c;
+}
+
+.cookie-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.cookie-row:last-child {
+    border-bottom: none;
+}
+
+.cookie-name {
+    font-family: monospace;
+    font-weight: 600;
+    color: #0984e3;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.cookie-equals {
+    color: #b2bec3;
+    flex-shrink: 0;
+}
+
+.cookie-value {
+    font-family: monospace;
+    color: #2d3436;
+    word-break: break-all;
+    flex: 1;
+}
+
+.cookie-delete-btn {
+    background: none;
+    border: none;
+    color: #b2bec3;
+    cursor: pointer;
+    font-size: 1em;
+    padding: 0 4px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.cookie-delete-btn:hover {
+    color: #d63031;
+}
+
+.cookie-httponly-badge {
+    font-size: 0.7em;
+    font-weight: 600;
+    color: #636e72;
+    background: #f0f0f0;
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.cookie-httponly-note {
+    margin: 12px 0 0;
+    font-size: 0.8em;
+    color: #b2bec3;
+}

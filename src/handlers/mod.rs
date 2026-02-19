@@ -5,3 +5,5 @@ pub mod lb;
 pub mod echo;
 pub mod common;
 pub mod waf;
+pub mod cookie;
+pub mod hdr;

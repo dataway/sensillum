@@ -5,9 +5,9 @@ const SENSILLUM_MAX_URI_BYTES = 65534;
 
 // Binary search for maximum header/URL size.
 // testFunction(size) must return { ok: bool, status: number|null }
-async function binarySearchHeaderSize(testFunction, resultsDiv, testType) {
+async function binarySearchHeaderSize(testFunction, resultsDiv, testType, maxBytes) {
     let minSize = 0;
-    let maxSize = SENSILLUM_MAX_HEADER_BYTES * 1.1;
+    let maxSize = (maxBytes || SENSILLUM_MAX_HEADER_BYTES) * 1.1;
     let maxWorkingSize = 0;
     let rejectionStatus = undefined; // HTTP status on first confirmed failure
     let iterations = 0;
@@ -79,6 +79,9 @@ async function binarySearchHeaderSize(testFunction, resultsDiv, testType) {
 function formatRejectionStatus(status) {
     if (status === null) {
         return `<span style="color:#d63031;">🔌 Connection reset (no HTTP response)</span> — the server closed the connection without sending a status code.`;
+    }
+    if (status === -1) {
+        return `<span style="color:#e17055;">🌐 Browser blocked the response</span> — the browser rejected the response before it arrived (e.g. Chrome's ~256 KB response-header limit). This is a browser constraint, not the proxy.`;
     }
     if (status === 414) {
         return `<span style="color:#00b894;">✅ HTTP 414 URI Too Long</span> — correct RFC 9110 response for oversized URLs.`;

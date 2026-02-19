@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::config::ServerConfig;
-use crate::handlers::{index, ws, sse, lb, echo, waf};
+use crate::handlers::{index, ws, sse, lb, echo, waf, cookie, hdr};
 use crate::handlers::common::OrInternalError;
 
 // Decrement the active-connection counter when the per-connection service is dropped.
@@ -97,6 +97,8 @@ async fn handle_request(
         "/sse" => sse::handle_sse(req, client_addr, server_addr, config).await,
         "/lb" => lb::handle_lb(req, headers, config, client_addr, server_addr, protocol).await.unwrap(),
         "/waf" => waf::handle_waf(req).await,
+        "/delete-cookie" => cookie::handle_delete_cookie(req).await,
+        "/hdr" => hdr::handle_response_headers_test(req).await,
         p if p == "/echo" || p.starts_with("/echo/") => {
             let uri = req.uri();
             let echo_path = uri.path().to_string();

@@ -4,6 +4,12 @@
     gap: 20px;
 }
 
+@media (max-width: 1300px) {
+    .headers {
+        flex-direction: column;
+    }
+}
+
 .headers-column {
     flex: 1;
     background: white;
