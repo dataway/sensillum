@@ -8,7 +8,27 @@ use std::time::Duration;
 use std::sync::Arc;
 
 use crate::config::ServerConfig;
-use super::common::build_server_info;
+use super::common::{build_server_info, OrInternalError};
+
+/// Returns false only when an Origin header is present and its host[:port]
+/// does not match the Host header — i.e. an explicit cross-origin browser request.
+/// Requests with no Origin header (curl, server-side clients) are passed through.
+fn origin_matches_host(headers: &hyper::HeaderMap) -> bool {
+    let origin = match headers.get(header::ORIGIN).and_then(|v| v.to_str().ok()) {
+        Some(o) => o,
+        None => return true, // no Origin → not a browser cross-origin request
+    };
+    let host = match headers.get(header::HOST).and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return false, // Origin present but no Host — reject
+    };
+    // Strip scheme (http://, https://, ws://, wss://) to get bare host[:port]
+    let origin_host = ["https://", "http://", "wss://", "ws://"]
+        .iter()
+        .find_map(|scheme| origin.strip_prefix(scheme))
+        .unwrap_or(origin);
+    origin_host == host
+}
 
 pub async fn handle_ws_upgrade(
     req: Request<Body>,
@@ -16,6 +36,15 @@ pub async fn handle_ws_upgrade(
     server_addr: SocketAddr,
     config: Arc<ServerConfig>,
 ) -> Response<Body> {
+    // RFC 6455 §4.1: the opening handshake must be a GET request.
+    if req.method() != hyper::Method::GET {
+        return Response::builder()
+            .status(StatusCode::METHOD_NOT_ALLOWED)
+            .header("Allow", "GET")
+            .body(Body::from("WebSocket upgrade requires GET"))
+            .or_500();
+    }
+
     // Check if it's a WebSocket upgrade request
     let headers = req.headers();
     let is_upgrade = headers
@@ -28,8 +57,10 @@ pub async fn handle_ws_upgrade(
         return Response::builder()
             .status(StatusCode::BAD_REQUEST)
             .body(Body::from("Expected WebSocket upgrade"))
-            .unwrap();
+            .or_500();
     }
+
+    let origin_mismatch = !origin_matches_host(headers);
 
     // Perform WebSocket handshake
     let key = headers
@@ -41,10 +72,13 @@ pub async fn handle_ws_upgrade(
     
     // Get HTTP protocol version
     let protocol = format!("{:?}", req.version());
-    
-    // Clone variables for spawned task (WebSocket requires separate task that outlives handler)
-    let headers_clone = headers.clone();
-    
+
+    let headers_for_task = if origin_mismatch {
+        hyper::HeaderMap::new()
+    } else {
+        headers.clone()
+    };
+
     // Spawn task to handle the WebSocket connection
     tokio::spawn(async move {
         // Wait for the connection to be upgraded
@@ -55,15 +89,19 @@ pub async fn handle_ws_upgrade(
                     tokio_tungstenite::tungstenite::protocol::Role::Server,
                     None,
                 ).await;
-                
-                let server_info = build_server_info(
-                    &headers_clone,
+
+                let mut server_info = build_server_info(
+                    &headers_for_task,
                     client_addr,
                     server_addr,
                     config.clone(),
                     protocol.clone(),
                 );
-                
+
+                if origin_mismatch {
+                    server_info["origin_mismatch"] = json!(true);
+                }
+
                 handle_websocket(ws, server_info, client_addr, server_addr).await;
             }
             Err(e) => {
@@ -78,7 +116,7 @@ pub async fn handle_ws_upgrade(
         .header(header::CONNECTION, "Upgrade")
         .header(header::SEC_WEBSOCKET_ACCEPT, accept)
         .body(Body::empty())
-        .unwrap()
+        .or_500()
 }
 
 async fn handle_websocket(

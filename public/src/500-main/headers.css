@@ -80,3 +80,29 @@
     color: #2d3436;
     word-break: break-all;
 }
+
+.origin-mismatch-warning {
+    background: #fff3cd;
+    border-left: 4px solid #f39c12;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    color: #7d4e00;
+}
+
+.origin-mismatch-warning strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.origin-mismatch-warning p {
+    margin: 0;
+    font-size: 0.9em;
+}
+
+.origin-mismatch-warning code {
+    background: #fde8a0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}

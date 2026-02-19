@@ -5,7 +5,7 @@ use std::time::Duration;
 use tokio::time::interval;
 
 use crate::config::ServerConfig;
-use super::common::build_server_info;
+use super::common::{build_server_info, OrInternalError};
 
 pub async fn handle_sse(
     req: Request<Body>,
@@ -53,7 +53,6 @@ pub async fn handle_sse(
         .header("Content-Type", "text/event-stream")
         .header("Cache-Control", "no-cache")
         .header("Connection", "keep-alive")
-        .header("Access-Control-Allow-Origin", "*")
         .body(Body::wrap_stream(stream))
-        .unwrap()
+        .or_500()
 }

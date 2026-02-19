@@ -7,16 +7,30 @@ pub struct ServerConfig {
 }
 
 pub fn parse_config() -> ServerConfig {
+    // Seed defaults from environment variables; CLI args override below.
+    let mut port: u16 = std::env::var("SENSILLUM_PORT")
+        .ok()
+        .map(|v| v.parse().unwrap_or_else(|_| {
+            eprintln!("Error: SENSILLUM_PORT is not a valid port number");
+            std::process::exit(1);
+        }))
+        .unwrap_or(3030);
+
+    let mut node_name: Option<String> = std::env::var("SENSILLUM_NODE").ok();
+
+    let mut url_prefix: Option<String> = std::env::var("SENSILLUM_PREFIX")
+        .ok()
+        .map(|v| parse_prefix(&v));
+
     let mut args = std::env::args().skip(1);
-    let mut port = 3030;
-    let mut node_name = None;
-    let mut url_prefix = None;
-    
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "-p" | "--port" => {
                 if let Some(port_str) = args.next() {
-                    port = port_str.parse().expect("Invalid port number");
+                    port = port_str.parse().unwrap_or_else(|_| {
+                        eprintln!("Error: Invalid port number '{port_str}'");
+                        std::process::exit(1);
+                    });
                 } else {
                     eprintln!("Error: --port requires a value");
                     std::process::exit(1);
@@ -32,12 +46,7 @@ pub fn parse_config() -> ServerConfig {
             }
             "-x" | "--prefix" => {
                 if let Some(prefix) = args.next() {
-                    let prefix = prefix.trim_end_matches('/');
-                    if !prefix.is_empty() && !prefix.starts_with('/') {
-                        eprintln!("Error: URL prefix must start with /");
-                        std::process::exit(1);
-                    }
-                    url_prefix = if prefix.is_empty() { None } else { Some(prefix.to_string()) };
+                    url_prefix = Some(parse_prefix(&prefix));
                 } else {
                     eprintln!("Error: --prefix requires a value");
                     std::process::exit(1);
@@ -50,6 +59,10 @@ pub fn parse_config() -> ServerConfig {
                 println!("  -n, --node <NAME>    Node name for identification");
                 println!("  -x, --prefix <PATH>  URL prefix for reverse proxy [e.g., /api]");
                 println!("  -h, --help           Print help");
+                println!("\nEnvironment variables (overridden by CLI flags):");
+                println!("  SENSILLUM_PORT       Same as --port");
+                println!("  SENSILLUM_NODE       Same as --node");
+                println!("  SENSILLUM_PREFIX     Same as --prefix");
                 std::process::exit(0);
             }
             _ => {
@@ -59,16 +72,27 @@ pub fn parse_config() -> ServerConfig {
             }
         }
     }
-    
+
     let hostname = hostname::get()
         .ok()
         .and_then(|h| h.into_string().ok())
         .unwrap_or_else(|| "unknown".to_string());
-    
+
     ServerConfig {
         port,
         node_name,
         hostname,
         url_prefix,
     }
+}
+
+/// Validate and normalise a URL prefix string: strip trailing slashes,
+/// require a leading `/` (unless the result is empty, which maps to `None`).
+fn parse_prefix(raw: &str) -> String {
+    let prefix = raw.trim_end_matches('/');
+    if !prefix.is_empty() && !prefix.starts_with('/') {
+        eprintln!("Error: URL prefix must start with /");
+        std::process::exit(1);
+    }
+    prefix.to_string()
 }

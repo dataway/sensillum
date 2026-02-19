@@ -71,11 +71,22 @@ function displayServerInfo(data, containerId) {
         serverInfoHtml += '</div>';
     }
 
-    let tableHtml = '<table class="headers-table"><thead><tr><th>Header Name</th><th>Value</th></tr></thead><tbody>';
-    for (const [name, value] of Object.entries(headers)) {
-        tableHtml += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(value)}</td></tr>`;
+    let tableHtml;
+    if (data.origin_mismatch) {
+        html = '<div class="origin-mismatch-warning">' +
+            '<strong>&#9888; Cross-origin connection detected</strong>' +
+            '<p>This WebSocket was opened from an origin that does not match the server\'s ' +
+            '<code>Host</code> header. Request headers have been suppressed to prevent ' +
+            'cross-origin credential exposure.</p>' +
+            '</div>' + html;
+        tableHtml = '';
+    } else {
+        tableHtml = '<table class="headers-table"><thead><tr><th>Header Name</th><th>Value</th></tr></thead><tbody>';
+        for (const [name, value] of Object.entries(headers)) {
+            tableHtml += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(value)}</td></tr>`;
+        }
+        tableHtml += '</tbody></table>';
     }
-    tableHtml += '</tbody></table>';
 
     headersContent.innerHTML = html + serverInfoHtml + tableHtml;
 }

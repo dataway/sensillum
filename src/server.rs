@@ -3,22 +3,50 @@ use hyper::service::{make_service_fn, service_fn};
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::config::ServerConfig;
 use crate::handlers::{index, ws, sse, lb, echo, waf};
+use crate::handlers::common::OrInternalError;
+
+// Decrement the active-connection counter when the per-connection service is dropped.
+struct ConnectionGuard(Arc<AtomicUsize>);
+impl Drop for ConnectionGuard {
+    fn drop(&mut self) { self.0.fetch_sub(1, Ordering::Relaxed); }
+}
 
 pub async fn run_server(config: Arc<ServerConfig>) -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
-    
+
     println!("Server bound to: {}", addr);
-    
+
+    let active = Arc::new(AtomicUsize::new(0));
+    let peak   = Arc::new(AtomicUsize::new(0));
+
+    // Log peak concurrent connections every 60 s, then reset the counter.
+    let peak_log = peak.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+        interval.tick().await; // skip the immediate first tick
+        loop {
+            interval.tick().await;
+            println!("Peak concurrent connections (last 60s): {}", peak_log.swap(0, Ordering::Relaxed));
+        }
+    });
+
     let make_svc = make_service_fn(move |conn: &hyper::server::conn::AddrStream| {
         let client_addr = conn.remote_addr();
         let server_addr = conn.local_addr();
         let config = config.clone();
-        
+
+        // Track connection count; ConnectionGuard decrements on drop.
+        let cur = active.fetch_add(1, Ordering::Relaxed) + 1;
+        peak.fetch_max(cur, Ordering::Relaxed);
+        let _guard = ConnectionGuard(active.clone());
+
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
+                let _guard = &_guard; // keep guard alive for the connection lifetime
                 handle_request(req, client_addr, server_addr, config.clone())
             }))
         }
@@ -46,7 +74,16 @@ async fn handle_request(
     let mut path = req.uri().path();
     let headers = req.headers().clone();
     let protocol = format!("{:?}", req.version());
-    
+
+    // Health check — always available, regardless of url_prefix.
+    if path == "/healthz" {
+        return Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "text/plain")
+            .body(Body::from("OK"))
+            .or_500());
+    }
+
     // Strip URL prefix if configured
     if let Some(prefix) = &config.url_prefix {
         path = path.strip_prefix(prefix)
@@ -69,7 +106,7 @@ async fn handle_request(
         _ => Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(Body::from("Not Found"))
-            .unwrap(),
+            .or_500(),
     };
     
     Ok(response)

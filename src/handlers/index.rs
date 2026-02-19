@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::build_info;
 use crate::config::ServerConfig;
-use super::common::build_server_info;
+use super::common::{build_server_info, OrInternalError};
 
 #[derive(RustEmbed)]
 #[folder = "generated/"]
@@ -51,5 +51,5 @@ pub async fn handle_index(
         .header("Pragma", "no-cache")
         .header("Expires", "0")
         .body(Body::from(body))
-        .unwrap()
+        .or_500()
 }

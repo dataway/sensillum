@@ -2,7 +2,7 @@ use hyper::{Body, Request, Response, StatusCode, HeaderMap};
 use std::sync::Arc;
 use std::net::SocketAddr;
 use crate::config::ServerConfig;
-use super::common::build_server_info;
+use super::common::{build_server_info, OrInternalError};
 
 pub async fn handle_lb(
     _req: Request<Body>,
@@ -28,7 +28,7 @@ pub async fn handle_lb(
         .header("Pragma", "no-cache")
         .header("Expires", "0")
         .body(Body::from(response_data.to_string()))
-        .unwrap();
+        .or_500();
 
     Ok(response)
 }

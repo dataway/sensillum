@@ -1,3 +1,4 @@
+use hyper::{Body, Response, StatusCode};
 use hyper::HeaderMap;
 use serde_json::{json, Value};
 use std::net::SocketAddr;
@@ -5,6 +6,24 @@ use std::sync::Arc;
 use crate::config::ServerConfig;
 use crate::build_info;
 use sha2::{Sha256, Digest};
+
+/// Extension trait that converts a `Response` builder `Result` into a `Response`,
+/// logging the error and returning a plain 500 rather than panicking.
+pub trait OrInternalError {
+    fn or_500(self) -> Response<Body>;
+}
+
+impl OrInternalError for Result<Response<Body>, hyper::http::Error> {
+    fn or_500(self) -> Response<Body> {
+        self.unwrap_or_else(|e| {
+            eprintln!("Response builder error: {e}");
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::from("Internal Server Error"))
+                .expect("fallback 500 is always valid")
+        })
+    }
+}
 
 /// Compute SHA-256 hash and return first 16 bytes as array for insignia generation
 fn compute_hash_bytes(input: &str) -> Vec<u8> {
