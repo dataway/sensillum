@@ -3,9 +3,9 @@ use rust_embed::RustEmbed;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use super::common::{build_server_info, OrInternalError};
 use crate::build_info;
 use crate::config::ServerConfig;
-use super::common::{build_server_info, OrInternalError};
 
 #[derive(RustEmbed)]
 #[folder = "generated/"]
@@ -19,25 +19,21 @@ pub async fn handle_index(
 ) -> Response<Body> {
     let header = Assets::get("header.html").expect("header.html missing from binary");
     let footer = Assets::get("footer.html").expect("footer.html missing from binary");
-    let tail   = Assets::get("tail.html").expect("tail.html missing from binary");
+    let tail = Assets::get("tail.html").expect("tail.html missing from binary");
 
     let protocol = format!("{:?}", req.version());
     let version_line = if config.privacy_mode {
-        format!(r#"<span class="version">Sensillum v{}</span>"#, build_info::version())
+        format!(
+            r#"<span class="version">Sensillum v{}</span>"#,
+            build_info::version()
+        )
     } else {
         format!(
-            r#"<span class="version">Sensillum v{} (built {})</span>"#,
-            build_info::full_version(),
-            build_info::build_time(),
+            r#"<span class="version full_version">Sensillum v{}</span>"#,
+            build_info::full_version()
         )
     };
-    let server_info = build_server_info(
-        req.headers(),
-        client_addr,
-        server_addr,
-        config,
-        protocol,
-    );
+    let server_info = build_server_info(req.headers(), client_addr, server_addr, config, protocol);
 
     let body = [
         header.data.as_ref(),
@@ -45,7 +41,8 @@ pub async fn handle_index(
         footer.data.as_ref(),
         version_line.as_bytes(),
         tail.data.as_ref(),
-    ].concat();
+    ]
+    .concat();
 
     Response::builder()
         .status(StatusCode::OK)

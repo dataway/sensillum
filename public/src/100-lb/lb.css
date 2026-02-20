@@ -52,12 +52,17 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    position: relative;
 }
 
 .lb-item .lb-number {
     font-weight: 600;
-    color: #636e72;
-    font-size: 0.9em;
+    color: #b2bec3;
+    font-size: 0.8em;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    line-height: 1;
 }
 
 .lb-item .lb-node {
@@ -73,4 +78,72 @@
     font-family: monospace;
     color: #636e72;
     font-size: 0.9em;
+}
+
+.lb-item--pending {
+    border-left-color: #b2bec3;
+    opacity: 0.6;
+    animation: lb-pulse 1.2s ease-in-out infinite;
+}
+
+.lb-item--pending .lb-pending-label {
+    font-size: 0.85em;
+    color: #b2bec3;
+    font-style: italic;
+}
+
+.lb-item--error {
+    border-left-color: #d63031;
+}
+
+.lb-item--error .lb-number {
+    color: #636e72;
+}
+
+.lb-item--error .lb-error {
+    font-size: 0.85em;
+    color: #d63031;
+}
+
+.lb-proxy-body {
+    font-size: 0.78em;
+    color: #636e72;
+    margin-top: 2px;
+}
+
+.lb-proxy-body summary {
+    cursor: pointer;
+    color: #b2bec3;
+    user-select: none;
+}
+
+.lb-proxy-body summary:hover {
+    color: #636e72;
+}
+
+.lb-shadow-host {
+    display: block;
+    margin-top: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 4px;
+    background: #fff;
+    border: 1px solid #dfe6e9;
+}
+
+.lb-timer {
+    margin-top: auto;
+    font-size: 0.78em;
+    font-variant-numeric: tabular-nums;
+    color: #b2bec3;
+    text-align: right;
+}
+
+.lb-timer--done {
+    color: #00b894;
+}
+
+@keyframes lb-pulse {
+    0%, 100% { opacity: 0.6; }
+    50%       { opacity: 0.35; }
 }
