@@ -68,6 +68,35 @@ curl -v "http://localhost:3030/echo?pad=$LONG"
 
 ---
 
+## Header character test — control characters in request headers
+
+The browser's fetch API blocks control characters in request header values before
+they leave the machine, so the UI can only test high-ASCII bytes (0x80–0xFF).
+Use curl to send the characters the browser refuses to touch.
+
+```bash
+# Null byte
+curl -v -H $'X-Test-Char: probe\x00probe' http://localhost:3030/echo
+
+# Carriage Return (CR)
+curl -v -H $'X-Test-Char: probe\rprobe' http://localhost:3030/echo
+
+# Line Feed (LF)
+curl -v -H $'X-Test-Char: probe\nprobe' http://localhost:3030/echo
+
+# CRLF injection attempt
+curl -v -H $'X-Test-Char: probe\r\nInjected-Header: malicious' http://localhost:3030/echo
+
+# DEL (0x7F)
+curl -v -H $'X-Test-Char: probe\x7fprobe' http://localhost:3030/echo
+```
+
+A well-configured proxy should reject or sanitise these; Sensillum itself sits behind
+hyper which already rejects most of them at parse time, so the interesting observation
+is what status code (if any) the proxy returns rather than what Sensillum echoes.
+
+---
+
 ## HTTP/2 cleartext (h2c)
 
 Browsers only use HTTP/2 over TLS. curl can send h2c directly using prior knowledge

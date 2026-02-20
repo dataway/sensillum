@@ -1,27 +1,36 @@
+mod build_info;
 mod config;
 mod handlers;
 mod server;
-mod build_info;
 
-use std::sync::Arc;
 use config::parse_config;
 use server::run_server;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
-    println!(r"
+    println!(
+        r"
    _____ _______   _______ ______    __    __  ____  ___
   / ___// ____/ | / / ___//  _/ /   / /   / / / /  |/  /
   \__ \/ __/ /  |/ /\__ \ / // /   / /   / / / / /|_/ /
  ___/ / /___/ /|  /___/ // // /___/ /___/ /_/ / /  / /
 /____/_____/_/ |_//____/___/_____/_____/\____/_/  /_/
-");
 
-    println!("Sensillum {}", build_info::full_version());
-    println!("{}", build_info::repository());
-    
+Sensillum {}
+{}
+
+",
+        build_info::full_version(),
+        build_info::repository()
+    );
+
     let config = Arc::new(parse_config());
-    
+
+    if config.privacy_mode {
+        println!("Privacy mode enabled: server_addr, hostname, build_time and url_prefix will not be sent to clients.");
+    }
+
     if let Err(e) = run_server(config).await {
         eprintln!("Server error: {}", e);
         std::process::exit(1);

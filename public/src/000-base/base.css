@@ -54,3 +54,13 @@ body {
         color: #636e72;
         font-size: 0.9em;
 }
+
+.header-redacted {
+        color: #636e72;
+        font-style: italic;
+}
+
+.header-binary {
+        color: #636e72;
+        font-style: italic;
+}

@@ -17,14 +17,14 @@ async function binarySearchHeaderSize(testFunction, resultsDiv, testType, maxByt
                 <div class="result-card">
                     <div style="font-weight: 600; color: #2d3436;">Searching for maximum ${testType}...</div>
                     <div class="progress-bar">
-                        <div class="progress-fill" id="size-progress" style="width: 0%"></div>
+                        <div class="progress-fill" style="width: 0%"></div>
                     </div>
-                    <div class="result-detail" id="size-status">Testing...</div>
+                    <div class="result-detail">Testing...</div>
                 </div>
             `;
 
-    const progressBar = document.getElementById('size-progress');
-    const statusDiv = document.getElementById('size-status');
+    const progressBar = resultsDiv.querySelector('.progress-fill');
+    const statusDiv = resultsDiv.querySelector('.result-detail');
 
     // EMA bandwidth estimate in bytes/s. Seeded at 1 MB/s so the first timeout
     // is a reasonable ~5 s for a 1 MB initial probe, and at most 30 s.

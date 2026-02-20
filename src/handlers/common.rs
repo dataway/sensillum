@@ -1,11 +1,11 @@
-use hyper::{Body, Response, StatusCode};
+use crate::build_info;
+use crate::config::ServerConfig;
 use hyper::HeaderMap;
+use hyper::{Body, Response, StatusCode};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use crate::config::ServerConfig;
-use crate::build_info;
-use sha2::{Sha256, Digest};
 
 /// Extension trait that converts a `Response` builder `Result` into a `Response`,
 /// logging the error and returning a plain 500 rather than panicking.
@@ -56,10 +56,15 @@ pub fn decode_query_value(s: &str) -> String {
 
 /// Parse a query string into a simple key→value map (last value wins).
 pub fn parse_query(query: &str) -> std::collections::HashMap<String, String> {
-    query.split('&')
+    query
+        .split('&')
         .filter_map(|pair| {
             let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
-            if k.is_empty() { None } else { Some((decode_query_value(k), decode_query_value(v))) }
+            if k.is_empty() {
+                None
+            } else {
+                Some((decode_query_value(k), decode_query_value(v)))
+            }
         })
         .collect()
 }
@@ -72,34 +77,54 @@ pub fn build_server_info(
     config: Arc<ServerConfig>,
     protocol: String,
 ) -> Value {
-    // Convert headers to JSON
-    let headers_json: Value = headers
-        .iter()
-        .map(|(name, value)| {
-            (
-                name.to_string(),
-                json!(value.to_str().unwrap_or("<binary>")),
-            )
-        })
-        .collect::<serde_json::Map<String, Value>>()
-        .into();
-    
+    // Split headers into echoed and redacted based on config.redact_prefixes.
+    // Redacted headers appear in the map as {"redacted": true} rather than their value.
+    let mut headers_map = serde_json::Map::new();
+
+    for (name, value) in headers.iter() {
+        let name_str = name.to_string(); // HeaderName is already lowercase
+        let json_value = if config
+            .redact_prefixes
+            .iter()
+            .any(|p| name_str.starts_with(p.as_str()))
+        {
+            json!({"redacted": true})
+        } else {
+            match value.to_str() {
+                Ok(s) => json!(s),
+                Err(_) => {
+                    let bytes = value.as_bytes();
+                    if bytes.len() <= 16 {
+                        let ints: Vec<u32> = bytes.iter().map(|&b| b as u32).collect();
+                        json!({"binary": true, "data": ints})
+                    } else {
+                        json!({"binary": true})
+                    }
+                }
+            }
+        };
+        headers_map.insert(name_str, json_value);
+    }
+
     let mut server_info = json!({
         "client_addr": client_addr.to_string(),
-        "server_addr": server_addr.to_string(),
-        "hostname": config.hostname,
-        "hostname_hash": compute_hash_bytes(&config.hostname),
         "protocol": protocol,
         "version": build_info::version(),
-        "build_time": build_info::build_time(),
-        "url_prefix": config.url_prefix.as_deref().unwrap_or(""),
-        "headers": headers_json
+        "headers": Value::Object(headers_map),
     });
-    
+
+    if !config.privacy_mode {
+        server_info["server_addr"] = json!(server_addr.to_string());
+        server_info["hostname"] = json!(config.hostname);
+        server_info["hostname_hash"] = json!(compute_hash_bytes(&config.hostname));
+        server_info["build_time"] = json!(build_info::build_time());
+        server_info["url_prefix"] = json!(config.url_prefix.as_deref().unwrap_or(""));
+    }
+
     if let Some(ref node_name) = config.node_name {
         server_info["node_name"] = json!(node_name);
         server_info["node_name_hash"] = json!(compute_hash_bytes(node_name));
     }
-    
+
     server_info
 }

@@ -9,6 +9,11 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
+// Format a byte value as a two-digit uppercase hex string, e.g. 9 → "0x09"
+function byteHex(n) {
+    return '0x' + n.toString(16).padStart(2, '0').toUpperCase();
+}
+
 // Helper function to format bytes
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -83,7 +88,28 @@ function displayServerInfo(data, containerId) {
     } else {
         tableHtml = '<table class="headers-table"><thead><tr><th>Header Name</th><th>Value</th></tr></thead><tbody>';
         for (const [name, value] of Object.entries(headers)) {
-            tableHtml += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(value)}</td></tr>`;
+            let cell;
+            if (value && typeof value === 'object') {
+                if (value.redacted) {
+                    cell = '<span class="header-redacted">🔒 redacted</span>';
+                } else if (value.binary) {
+                    if (Array.isArray(value.data)) {
+                        const rendered = value.data.map(b => {
+                            if (b === 0x09) return '\\t';
+                            if (b >= 0x20 && b <= 0x7e) return String.fromCharCode(b);
+                            return `\\x${b.toString(16).padStart(2, '0')}`;
+                        }).join('');
+                        cell = escapeHtml(rendered);
+                    } else {
+                        cell = '<span class="header-binary">binary</span>';
+                    }
+                } else {
+                    cell = escapeHtml(JSON.stringify(value));
+                }
+            } else {
+                cell = escapeHtml(value);
+            }
+            tableHtml += `<tr><td>${escapeHtml(name)}</td><td>${cell}</td></tr>`;
         }
         tableHtml += '</tbody></table>';
     }

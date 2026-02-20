@@ -22,18 +22,21 @@ pub async fn handle_index(
     let tail   = Assets::get("tail.html").expect("tail.html missing from binary");
 
     let protocol = format!("{:?}", req.version());
+    let version_line = if config.privacy_mode {
+        format!(r#"<span class="version">Sensillum v{}</span>"#, build_info::version())
+    } else {
+        format!(
+            r#"<span class="version">Sensillum v{} (built {})</span>"#,
+            build_info::full_version(),
+            build_info::build_time(),
+        )
+    };
     let server_info = build_server_info(
         req.headers(),
         client_addr,
         server_addr,
         config,
         protocol,
-    );
-
-    let version_line = format!(
-        r#"<span class="version">Sensillum v{}</span> (built {})"#,
-        build_info::version(),
-        build_info::build_time(),
     );
 
     let body = [
