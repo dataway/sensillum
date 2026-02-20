@@ -1,10 +1,23 @@
 fn main() {
     built::write_built_file().expect("Failed to acquire build-time information");
 
+    // Git metadata — set by build.sh (local) or as Docker build ARGs (CI).
+    // If absent (e.g. plain `cargo build`), the values are simply missing.
+    if let Ok(v) = std::env::var("SENSILLUM_GIT_COMMIT") {
+        println!("cargo:rustc-env=SENSILLUM_GIT_COMMIT={v}");
+    }
+    if let Ok(v) = std::env::var("SENSILLUM_GIT_TAG") {
+        println!("cargo:rustc-env=SENSILLUM_GIT_TAG={v}");
+    }
+    if let Ok(v) = std::env::var("SENSILLUM_GIT_DIRTY") {
+        println!("cargo:rustc-env=SENSILLUM_GIT_DIRTY={v}");
+    }
+
     /////////////////////////////////////////////////////////////////////////////
     // Assemble public/index.html from the source parts under public/src/
 
     let src_dir = std::path::Path::new("public/src");
+    std::fs::create_dir_all("generated").expect("Failed to create generated/");
 
     // Collect subdirectories and sort alphanumerically
     let mut subdirs: Vec<std::path::PathBuf> = std::fs::read_dir(src_dir)
@@ -58,7 +71,6 @@ fn main() {
 "#
     );
 
-    std::fs::create_dir_all("generated").expect("Failed to create generated/");
     std::fs::write("generated/header.html", header).expect("Failed to write generated/header.html");
     std::fs::write("generated/footer.html", footer).expect("Failed to write generated/footer.html");
     std::fs::write("generated/tail.html", tail).expect("Failed to write generated/tail.html");

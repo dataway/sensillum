@@ -1,4 +1,5 @@
 function displayHeaderSizeResult(resultsDiv, maxSize, testType, totalTests, rejectionStatus) {
+    const isResponseTest = testType.toLowerCase().startsWith('response');
     let recommendation;
     if (maxSize < 4096)        recommendation = '❌ Very restrictive. Will likely break modern authentication (OIDC/OAuth2 with JWTs).';
     else if (maxSize < 16384)  recommendation = '⚠️ Minimal limit. May work for simple apps but insufficient for complex OIDC scenarios.';
@@ -18,7 +19,7 @@ function displayHeaderSizeResult(resultsDiv, maxSize, testType, totalTests, reje
 
     const rejectionNote = rejectionStatus !== undefined
         ? `<div class="result-detail" style="margin-top:8px;">
-                        🚫 Rejection: ${formatRejectionStatus(rejectionStatus)}
+                        🚫 Rejection: ${formatRejectionStatus(rejectionStatus, isResponseTest)}
                     </div>`
         : '';
 

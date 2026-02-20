@@ -48,7 +48,38 @@ async function runProxySecurityTest() {
     };
 
     try {
-        // Make one request per header to avoid CDNs (e.g. CloudFlare) acting on
+        // --- Canary check ---
+        // Send a dedicated request with two innocuous end-to-end headers that every
+        // RFC-compliant proxy must forward. If either is missing, all subsequent
+        // results are unreliable (the proxy strips headers indiscriminately).
+        // We check presence only for Accept-Language because the browser may alter
+        // the exact value (e.g. appending system language preferences).
+        const CANARY_FROM    = 'canary@sensillum.test';
+        const CANARY_LANG    = 'en-US;q=0.88749';
+        let canaryWarning    = null;  // non-null string = unreliable results
+
+        button.textContent = 'Testing… (canary)';
+        try {
+            const canaryResp = await fetch(`${urlPrefix}/echo`, {
+                headers: { 'From': CANARY_FROM, 'Accept-Language': CANARY_LANG }
+            });
+            const canaryData = await canaryResp.json();
+            const ch = canaryData.headers || {};
+            const fromOk = ch['from'] === CANARY_FROM;
+            const langOk = 'accept-language' in ch;
+            if (!fromOk && !langOk) {
+                canaryWarning = 'Both canary headers (<code>From</code> and <code>Accept-Language</code>) were stripped. This proxy removes headers indiscriminately — security assessment is inconclusive.';
+            } else if (!fromOk) {
+                canaryWarning = 'Canary header <code>From: canary@sensillum.test</code> was stripped. This proxy may remove headers indiscriminately — results should be treated with caution.';
+            } else if (!langOk) {
+                canaryWarning = 'Canary header <code>Accept-Language</code> was stripped. This proxy may remove headers indiscriminately — results should be treated with caution.';
+            }
+        } catch (_) {
+            canaryWarning = 'Canary request failed — unable to verify whether the proxy forwards benign headers. Security assessment is inconclusive.';
+        }
+
+        // --- Per-header spoofed-header tests ---
+        // One request per header to avoid CDNs (e.g. CloudFlare) acting on
         // headers like X-Forwarded-Host and blocking the entire request.
         const perHeaderResults = {};
         let completed = 0;
@@ -124,6 +155,12 @@ async function runProxySecurityTest() {
 
         // Display detailed results
         let html = '';
+
+        if (canaryWarning) {
+            html += `<div style="margin-bottom:14px; padding:10px 14px; background:#fff3cd; border-left:4px solid #e17055; border-radius:4px; color:#6c4a00;">⚠️ <strong>Unreliable results:</strong> ${canaryWarning}</div>`;
+        } else {
+            html += `<div style="margin-bottom:14px; padding:10px 14px; background:#d4edda; border-left:4px solid #00b894; border-radius:4px; color:#155724;">✅ <strong>Canary headers passed:</strong> <code>From: canary@sensillum.test</code> and <code>Accept-Language</code> both forwarded — this proxy does not strip benign headers indiscriminately.</div>`;
+        }
 
         // Helper function to render a category section
         const renderCategory = (category, title) => {

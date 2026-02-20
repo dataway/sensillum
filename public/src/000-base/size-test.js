@@ -26,12 +26,59 @@ async function binarySearchHeaderSize(testFunction, resultsDiv, testType, maxByt
     const progressBar = document.getElementById('size-progress');
     const statusDiv = document.getElementById('size-status');
 
+    // EMA bandwidth estimate in bytes/s. Seeded at 1 MB/s so the first timeout
+    // is a reasonable ~5 s for a 1 MB initial probe, and at most 30 s.
+    let bwEstimate = 1 * 1024 * 1024;
+    const BW_ALPHA = 0.4; // EMA smoothing factor
+
+    // Returns timeout in ms: 4× the expected round-trip, clamped to [2 s, 30 s].
+    function adaptiveTimeout(size) {
+        return Math.max(2000, Math.min(30000, Math.round(4000 * size / bwEstimate)));
+    }
+
+    // Update the EMA with a new measurement. Ignore sub-50 ms samples (noise / tiny sizes).
+    function updateBandwidth(size, durationMs) {
+        if (durationMs < 50) return;
+        const sample = size / (durationMs / 1000);
+        bwEstimate = BW_ALPHA * sample + (1 - BW_ALPHA) * bwEstimate;
+    }
+
+    function formatBandwidth(bps) {
+        if (bps >= 1024 * 1024) return `${(bps / (1024 * 1024)).toFixed(1)} MB/s`;
+        if (bps >= 1024) return `${(bps / 1024).toFixed(0)} KB/s`;
+        return `${bps.toFixed(0)} B/s`;
+    }
+
+    // Wraps a testFunction call: measures elapsed time, updates the bandwidth EMA,
+    // and warns in statusDiv if the request stalls beyond the adaptive threshold.
+    async function timedTest(size) {
+        const timeout = adaptiveTimeout(size);
+        let stalled = false;
+        let stallTimer = setTimeout(() => {
+            stalled = true;
+            if (statusDiv) {
+                statusDiv.innerHTML = `Testing ${formatBytes(size)}… <span style="color:#e17055;">⚠️ No response for ${(timeout / 1000).toFixed(0)} s — the connection may be stalled. Reload the page to cancel.</span>`;
+            }
+        }, timeout);
+        const t0 = performance.now();
+        try {
+            const r = await testFunction(size);
+            const elapsed = performance.now() - t0;
+            clearTimeout(stallTimer);
+            updateBandwidth(size, elapsed);
+            return r;
+        } catch (err) {
+            clearTimeout(stallTimer);
+            throw err;
+        }
+    }
+
     try {
         let currentTestSize = 1024;
         statusDiv.textContent = 'Finding upper bound...';
 
         while (currentTestSize < maxSize) {
-            const r = await testFunction(currentTestSize);
+            const r = await timedTest(currentTestSize);
             if (!r.ok) {
                 if (rejectionStatus === undefined) rejectionStatus = r.status;
                 break;
@@ -40,6 +87,7 @@ async function binarySearchHeaderSize(testFunction, resultsDiv, testType, maxByt
             currentTestSize *= 2;
             if (currentTestSize > maxSize) currentTestSize = maxSize;
             progressBar.style.width = '10%';
+            statusDiv.textContent = `Finding upper bound… estimated bandwidth: ${formatBandwidth(bwEstimate)}`;
         }
 
         maxSize = currentTestSize;
@@ -51,9 +99,9 @@ async function binarySearchHeaderSize(testFunction, resultsDiv, testType, maxByt
 
             const progress = 10 + (iterations / maxIterations) * 90;
             progressBar.style.width = `${progress}%`;
-            statusDiv.textContent = `Testing ${formatBytes(midSize)}... (iteration ${iterations}/${maxIterations})`;
+            statusDiv.textContent = `Testing ${formatBytes(midSize)}… iteration ${iterations}/${maxIterations}, ~${formatBandwidth(bwEstimate)}`;
 
-            const r = await testFunction(midSize);
+            const r = await timedTest(midSize);
             if (r.ok) {
                 minSize = midSize;
                 maxWorkingSize = midSize;
@@ -76,7 +124,9 @@ async function binarySearchHeaderSize(testFunction, resultsDiv, testType, maxByt
 }
 
 // Format a rejection status code as a human-readable verdict
-function formatRejectionStatus(status) {
+// isResponseTest: true when the test measures response headers (not request headers/URL),
+// because a 502 Bad Gateway is the correct proxy behaviour in that direction.
+function formatRejectionStatus(status, isResponseTest = false) {
     if (status === null) {
         return `<span style="color:#d63031;">🔌 Connection reset (no HTTP response)</span> — the server closed the connection without sending a status code.`;
     }
@@ -91,6 +141,12 @@ function formatRejectionStatus(status) {
     }
     if (status >= 400 && status < 500) {
         return `<span style="color:#e17055;">⚠️ HTTP ${status}</span> — rejection with a non-standard 4xx code (expected 414 or 431).`;
+    }
+    if (status === 502 && isResponseTest) {
+        return `<span style="color:#00b894;">✅ HTTP 502 Bad Gateway</span> — correct response per RFC 9110 §15.6.3; the proxy received an oversized (invalid) response from the upstream and could not relay it.`;
+    }
+    if (status === 503 && isResponseTest) {
+        return `<span style="color:#e17055;">⚠️ HTTP 503 Service Unavailable</span> — seen in practice, but semantically imprecise per RFC 9110 §15.6.4 (503 means the proxy itself is overloaded, not that the upstream response was bad). 502 would be more accurate.`;
     }
     if (status >= 500) {
         return `<span style="color:#d63031;">❌ HTTP ${status}</span> — server error response rather than a proper rejection code.`;
