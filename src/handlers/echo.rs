@@ -13,7 +13,7 @@ pub async fn handle_echo(
     protocol: String,
     path: String,
     query: Option<String>,
-) -> Result<Response<Body>, hyper::Error> {
+) -> Response<Body> {
     let mut response_data = build_server_info(
         &headers,
         client_addr,
@@ -31,5 +31,5 @@ pub async fn handle_echo(
         .body(Body::from(response_data.to_string()))
         .or_500();
 
-    Ok(response)
+    response
 }

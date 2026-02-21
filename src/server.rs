@@ -23,7 +23,7 @@ pub async fn run_server(config: Arc<ServerConfig>) -> Result<(), Box<dyn std::er
     let active = Arc::new(AtomicUsize::new(0));
     let peak   = Arc::new(AtomicUsize::new(0));
 
-    // Log peak concurrent connections every 60 s, then reset the counter.
+    // Log peak concurrent connections every 60s, then reset the counter.
     let peak_log = peak.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
@@ -95,7 +95,7 @@ async fn handle_request(
         "/" => index::handle_index(req, client_addr, server_addr, config).await,
         "/ws" => ws::handle_ws_upgrade(req, client_addr, server_addr, config).await,
         "/sse" => sse::handle_sse(req, client_addr, server_addr, config).await,
-        "/lb" => lb::handle_lb(req, headers, config, client_addr, server_addr, protocol).await.unwrap(),
+        "/lb" => lb::handle_lb(req, headers, config, client_addr, server_addr, protocol).await,
         "/waf" => waf::handle_waf(req).await,
         "/delete-cookie" => cookie::handle_delete_cookie(req).await,
         "/hdr" => hdr::handle_response_headers_test(req).await,
@@ -103,7 +103,7 @@ async fn handle_request(
             let uri = req.uri();
             let echo_path = uri.path().to_string();
             let echo_query = uri.query().map(str::to_string);
-            echo::handle_echo(req, headers, config, client_addr, server_addr, protocol, echo_path, echo_query).await.unwrap()
+            echo::handle_echo(req, headers, config, client_addr, server_addr, protocol, echo_path, echo_query).await
         }
         _ => Response::builder()
             .status(StatusCode::NOT_FOUND)

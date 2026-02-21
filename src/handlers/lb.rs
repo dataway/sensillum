@@ -11,7 +11,7 @@ pub async fn handle_lb(
     client_addr: SocketAddr,
     server_addr: SocketAddr,
     protocol: String,
-) -> Result<Response<Body>, hyper::Error> {
+) -> Response<Body> {
     // Build server info using shared function
     let response_data = build_server_info(
         &headers,
@@ -30,5 +30,5 @@ pub async fn handle_lb(
         .body(Body::from(response_data.to_string()))
         .or_500();
 
-    Ok(response)
+    response
 }

@@ -19,12 +19,18 @@ pub fn repository() -> &'static str {
 
 /// Short git commit hash, if available (e.g. "a1b2c3d")
 pub fn git_commit() -> Option<&'static str> {
-    option_env!("SENSILLUM_GIT_COMMIT")
+    match option_env!("SENSILLUM_GIT_COMMIT") {
+        Some(s) if !s.is_empty() => Some(s),
+        _ => None,
+    }
 }
 
 /// The git tag pointing exactly at HEAD, if any (e.g. "v0.1.0")
 pub fn git_tag() -> Option<&'static str> {
-    option_env!("SENSILLUM_GIT_TAG")
+    match option_env!("SENSILLUM_GIT_TAG") {
+        Some(s) if !s.is_empty() => Some(s),
+        _ => None,
+    }
 }
 
 /// Whether the working tree had uncommitted changes at build time
