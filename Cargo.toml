@@ -1,6 +1,6 @@
 [package]
 name = "sensillum"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Anthony Uk"]
 description = "Sensillum is a simple testing web server that can be placed behind a proxy or load balancer. It tests whether websocket connections stay up, and echoes HTTP headers back to the client."

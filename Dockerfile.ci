@@ -1,0 +1,14 @@
+FROM scratch
+
+ARG TARGETARCH
+
+LABEL "org.opencontainers.image.title"="Sensillum"
+LABEL "org.opencontainers.image.source"="https://github.com/anthonyuk/sensillum"
+LABEL "org.opencontainers.image.vendor"="anthonyuk.dev"
+LABEL "org.opencontainers.image.licenses"="MIT"
+
+COPY sensillum-linux-${TARGETARCH} /sensillum
+
+EXPOSE 3030
+
+ENTRYPOINT ["/sensillum"]
